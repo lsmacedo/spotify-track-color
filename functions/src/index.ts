@@ -15,8 +15,8 @@ const requestHeadersSchema = yup.object({
 const requestBodySchema = yup.object({
   from: yup
       .string()
-      .oneOf(['auto', 'track', 'album', 'artist', 'playlist'])
-      .default('auto'),
+      .oneOf(['album', 'artist', 'playlist'])
+      .default('album'),
   colors: yup
       .array()
       .of(yup.string().matches(/^#([0-9A-F]{3}){1,2}$/i).required())
