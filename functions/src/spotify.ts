@@ -21,6 +21,7 @@ type RefreshTokenPayload = {
 
 type PlaybackStatePayload = {
   item: {
+    id: string;
     album: {
       images: SpotifyImage[];
     };
@@ -90,7 +91,8 @@ const getPlaybackState = async (config: SpotifyConfig) => {
 
 const getColorFromTrackAlbum = async (track: PlaybackStatePayload['item']) => {
   const imageUrl = track.album.images[0]?.url;
-  return (await Vibrant.from(imageUrl).getPalette()).DarkVibrant?.hex ?? null;
+  const color = (await Vibrant.from(imageUrl).getPalette()).DarkVibrant?.hex;
+  return color ?? null;
 };
 
 const getColorFromTrackLyrics = async (
@@ -117,21 +119,46 @@ export const getColorFromTrack = async (
   if (!isPlaying) {
     return null;
   }
+  const snapshot = await db
+      .collection('spotify_track')
+      .where('track_id', '==', item.id)
+      .get();
+  const {
+    album_color: albumColor,
+    lyrics_color: lyricsColor,
+  } = snapshot.docs[0]?.data() || {};
   let color: string | null;
   switch (from) {
-    case 'album':
-      color = await getColorFromTrackAlbum(item);
+    case 'album': {
+      if (albumColor) {
+        return albumColor;
+      }
+      color = albumColor as string || await getColorFromTrackAlbum(item);
       break;
+    }
     case 'lyrics': {
-      color = await getColorFromTrackLyrics(config, item);
+      if (lyricsColor) {
+        return lyricsColor;
+      }
+      color =
+          lyricsColor as string || await getColorFromTrackLyrics(config, item);
       // If unable to get color from track lyrics, fallback to album
       if (!color) {
-        color = await getColorFromTrackAlbum(item);
+        color = albumColor as string || await getColorFromTrackAlbum(item);
       }
       break;
     }
     default:
       throw new Error('option not yet support');
+  }
+  if (snapshot.docs[0]) {
+    await snapshot.docs[0].ref.update({[`${from}_color`]: color});
+  } else {
+    await db.collection('spotify_track').add({
+      track_id: item.id,
+      [`${from}_color`]: color,
+      created_at: new Date().toISOString(),
+    });
   }
   return color ?? null;
 };
