@@ -33,6 +33,7 @@ type PlaybackStatePayload = {
     };
   };
   currently_playing_type: SpotifyPlayingType;
+  is_playing: boolean;
 }
 
 const AUTH_URL = 'https://accounts.spotify.com/api/token';
@@ -94,7 +95,10 @@ export const getColorFrom = async (
     config: SpotifyConfig,
     from: 'auto' | SpotifyPlayingType
 ) => {
-  const {item} = await getPlaybackState(config);
+  const {item, is_playing: isPlaying} = await getPlaybackState(config);
+  if (!isPlaying) {
+    return null;
+  }
   let imageUrl: string | undefined;
   switch (from) {
     case 'album':

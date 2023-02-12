@@ -24,9 +24,12 @@ const requestBodySchema = yup.object({
 });
 
 type RequestBody = yup.InferType<typeof requestBodySchema>;
+type ResponseBody = {
+  color: string | null;
+};
 
 export const getSpotifyTrackColor = functions.https.onRequest(
-    async (request, response) => {
+    async (request, response: functions.Response<ResponseBody>) => {
       let body: RequestBody;
 
       // Validate request headers
@@ -50,7 +53,7 @@ export const getSpotifyTrackColor = functions.https.onRequest(
         const color = await getColorFrom(config.spotify, body.from);
 
         // Get available option that is closest to the color from the track
-        const responseColor = body.colors?.length ?
+        const responseColor = color && body.colors?.length ?
           closestColor(color, body.colors) :
           color;
 
