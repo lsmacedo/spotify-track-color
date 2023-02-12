@@ -25,11 +25,13 @@ The function accepts two optional parameters in the request body: `from` and
 
 ### from
 
-The from parameter allows you to specify the source of the image to extract the
-color from. You can specify one of the following options:
+The from parameter allows you to select the algorithm for the color selection.
+You can specify one of the following values:
 
-- album (default)
-- lyrics
+- album: this is the default option, it extracts the dark proeminent color from
+  the track album image
+- lyrics: determines a color based on feeling analysis from the track lyrics,
+  falling back to album color if no lyrics are found for the track
 
 ### colors
 
