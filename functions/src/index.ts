@@ -2,7 +2,7 @@ import * as functions from 'firebase-functions';
 import * as yup from 'yup';
 
 import {config} from './config';
-import {getColorFrom} from './spotify';
+import {getColorFromTrack} from './spotify';
 import {closestColor} from './utils';
 
 const requestHeadersSchema = yup.object({
@@ -15,7 +15,7 @@ const requestHeadersSchema = yup.object({
 const requestBodySchema = yup.object({
   from: yup
       .string()
-      .oneOf(['album', 'artist', 'playlist'])
+      .oneOf(['album', 'lyrics'])
       .default('album'),
   colors: yup
       .array()
@@ -50,7 +50,7 @@ export const getSpotifyTrackColor = functions.https.onRequest(
 
       try {
         // Get color from track
-        const color = await getColorFrom(config.spotify, body.from);
+        const color = await getColorFromTrack(config, body.from);
 
         // Get available option that is closest to the color from the track
         const responseColor = color && body.colors?.length ?

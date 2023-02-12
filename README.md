@@ -29,8 +29,7 @@ The from parameter allows you to specify the source of the image to extract the
 color from. You can specify one of the following options:
 
 - album (default)
-- artist
-- playlist
+- lyrics
 
 ### colors
 

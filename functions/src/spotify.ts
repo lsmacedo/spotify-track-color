@@ -1,10 +1,10 @@
 import axios from 'axios';
 import Vibrant from 'node-vibrant';
 
-import {SpotifyConfig} from './config';
+import {Config, SpotifyConfig} from './config';
 import {db} from './firestore';
-
-export type SpotifyPlayingType = 'track' | 'album' | 'artist' | 'playlist';
+import {getColorFromLyrics} from './openai';
+import {getTrackLyrics} from './genius';
 
 type SpotifyImage = {
   url: string;
@@ -20,19 +20,16 @@ type RefreshTokenPayload = {
 };
 
 type PlaybackStatePayload = {
-  context: {
-    type: string;
-    uri: string;
-  } | null;
   item: {
     album: {
       images: SpotifyImage[];
     };
     artists: {
-      id: string;
-    };
+      name: string;
+    }[];
+    name: string;
   };
-  currently_playing_type: SpotifyPlayingType;
+  currently_playing_type: 'track' | 'album' | 'artist' | 'playlist';
   is_playing: boolean;
 }
 
@@ -91,25 +88,50 @@ const getPlaybackState = async (config: SpotifyConfig) => {
   return response.data;
 };
 
-export const getColorFrom = async (
-    config: SpotifyConfig,
-    from: 'auto' | SpotifyPlayingType
+const getColorFromTrackAlbum = async (track: PlaybackStatePayload['item']) => {
+  const imageUrl = track.album.images[0]?.url;
+  return (await Vibrant.from(imageUrl).getPalette()).DarkVibrant?.hex ?? null;
+};
+
+const getColorFromTrackLyrics = async (
+    config: Config,
+    track: PlaybackStatePayload['item']
 ) => {
-  const {item, is_playing: isPlaying} = await getPlaybackState(config);
+  const lyrics = await getTrackLyrics(
+      config.genius,
+      track.name,
+      track.artists[0]?.name
+  );
+  let color: string | undefined;
+  if (lyrics) {
+    color = await getColorFromLyrics(config.openai, lyrics);
+  }
+  return color ?? null;
+};
+
+export const getColorFromTrack = async (
+    config: Config,
+    from: 'album' | 'lyrics'
+) => {
+  const {item, is_playing: isPlaying} = await getPlaybackState(config.spotify);
   if (!isPlaying) {
     return null;
   }
-  let imageUrl: string | undefined;
+  let color: string | null;
   switch (from) {
     case 'album':
-      imageUrl = item.album.images[0]?.url;
+      color = await getColorFromTrackAlbum(item);
       break;
+    case 'lyrics': {
+      color = await getColorFromTrackLyrics(config, item);
+      // If unable to get color from track lyrics, fallback to album
+      if (!color) {
+        color = await getColorFromTrackAlbum(item);
+      }
+      break;
+    }
     default:
       throw new Error('option not yet support');
   }
-  const color = (await Vibrant.from(imageUrl).getPalette()).DarkVibrant?.hex;
-  if (!color) {
-    throw new Error(`Unable to get color from ${from}`);
-  }
-  return color;
+  return color ?? null;
 };
