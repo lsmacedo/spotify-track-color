@@ -19,7 +19,7 @@ export const getColorFromLyrics = async (
       {
         model: 'text-davinci-003',
         // eslint-disable-next-line max-len
-        prompt: `Answer me with only a color hex string, what color would you associate with the lyrics: "${lyrics}"?`,
+        prompt: `Based on feelings analysis, answer me with only a color hex string what color would you associate with the lyrics: "${lyrics}"?`,
         max_tokens: 256,
         temperature: 0.5,
       }, {
